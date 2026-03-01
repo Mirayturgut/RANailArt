@@ -15,7 +15,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 # Render portu env ile verir (PORT)
-ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
 EXPOSE 8080
 
 COPY --from=build /app/publish ./
