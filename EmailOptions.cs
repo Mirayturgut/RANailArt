@@ -1,12 +1,13 @@
 using Microsoft.Extensions.Options;
-public class EmailOptions
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+
+public class BrevoOptions
 {
-    public string Host { get; set; } = default!;
-    public int Port { get; set; }
-    public string Username { get; set; } = default!;
-    public string Password { get; set; } = default!;
-    public string From { get; set; } = default!;
-    public string BusinessInbox { get; set; } = default!;
+    public string ApiKey { get; set; } = default!;
+    public string FromEmail { get; set; } = default!;
+    public string FromName { get; set; } = "RA Nail Art";
 }
 
 public interface IEmailService
@@ -16,33 +17,41 @@ public interface IEmailService
 
 public class BrevoEmailService : IEmailService
 {
-    private readonly IConfiguration _config;
+    private readonly HttpClient _http;
+    private readonly BrevoOptions _opt;
 
-    public BrevoEmailService(IConfiguration config)
+    public BrevoEmailService(HttpClient http, IOptions<BrevoOptions> opt)
     {
-        _config = config;
+        _http = http;
+        _opt = opt.Value;
     }
 
     public async Task SendAsync(string to, string subject, string htmlBody)
     {
-        var apiKey = _config["Brevo:ApiKey"];
+        if (string.IsNullOrWhiteSpace(_opt.ApiKey))
+            throw new Exception("Brevo ApiKey boş. Render ENV: Brevo__ApiKey kontrol et (API Key olmalı).");
 
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("api-key", apiKey);
+        var url = "https://api.brevo.com/v3/smtp/email";
 
-        var body = new
+        _http.DefaultRequestHeaders.Clear();
+        _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _http.DefaultRequestHeaders.Add("api-key", _opt.ApiKey);
+
+        var payload = new
         {
-            sender = new { name = "RA Nail Art", email = "miray0853@gmail.com" },
+            sender = new { name = _opt.FromName, email = _opt.FromEmail },
             to = new[] { new { email = to } },
             subject = subject,
             htmlContent = htmlBody
         };
 
-        var response = await client.PostAsJsonAsync(
-            "https://api.brevo.com/v3/smtp/email",
-            body
-        );
+        var json = JsonSerializer.Serialize(payload);
+        var res = await _http.PostAsync(url, new StringContent(json, Encoding.UTF8, "application/json"));
 
-        response.EnsureSuccessStatusCode();
+        if (!res.IsSuccessStatusCode)
+        {
+            var body = await res.Content.ReadAsStringAsync();
+            throw new Exception($"Brevo API hata: {(int)res.StatusCode} - {body}");
+        }
     }
 }
