@@ -8,7 +8,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     
 builder.Services.AddControllersWithViews();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
-builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IEmailService, BrevoEmailService>();
 
 var app = builder.Build();
 
