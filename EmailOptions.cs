@@ -14,28 +14,35 @@ public interface IEmailService
     Task SendAsync(string to, string subject, string htmlBody);
 }
 
-public class SmtpEmailService : IEmailService
+public class BrevoEmailService : IEmailService
 {
-    private readonly EmailOptions _opt;
-    public SmtpEmailService(IOptions<EmailOptions> opt) => _opt = opt.Value;
+    private readonly IConfiguration _config;
+
+    public BrevoEmailService(IConfiguration config)
+    {
+        _config = config;
+    }
 
     public async Task SendAsync(string to, string subject, string htmlBody)
     {
-        using var client = new System.Net.Mail.SmtpClient(_opt.Host, _opt.Port)
+        var apiKey = _config["Brevo:ApiKey"];
+
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("api-key", apiKey);
+
+        var body = new
         {
-            EnableSsl = true,
-            Credentials = new System.Net.NetworkCredential(_opt.Username, _opt.Password)
+            sender = new { name = "RA Nail Art", email = "miray0853@gmail.com" },
+            to = new[] { new { email = to } },
+            subject = subject,
+            htmlContent = htmlBody
         };
 
-        var msg = new System.Net.Mail.MailMessage
-        {
-            From = new System.Net.Mail.MailAddress(_opt.From),
-            Subject = subject,
-            Body = htmlBody,
-            IsBodyHtml = true
-        };
-        msg.To.Add(to);
+        var response = await client.PostAsJsonAsync(
+            "https://api.brevo.com/v3/smtp/email",
+            body
+        );
 
-        await client.SendMailAsync(msg);
+        response.EnsureSuccessStatusCode();
     }
 }
