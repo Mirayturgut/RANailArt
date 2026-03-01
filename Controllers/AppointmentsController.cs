@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -8,16 +7,16 @@ public class AppointmentsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
-    private readonly EmailOptions _emailOpt;
+    private readonly IConfiguration _config;
 
-    public AppointmentsController(AppDbContext db, IEmailService email, IOptions<EmailOptions> opt)
+    public AppointmentsController(AppDbContext db, IEmailService email, IConfiguration config)
     {
         _db = db;
         _email = email;
-        _emailOpt = opt.Value;
+        _config = config;
     }
 
-    // TEST: tarayıcıdan açınca çalışsın
+    // TEST
     [HttpGet("ping")]
     public IActionResult Ping() => Ok("pong");
 
@@ -54,7 +53,7 @@ public class AppointmentsController : ControllerBase
         _db.Appointments.Add(appt);
         await _db.SaveChangesAsync();
 
-        // Business controller linkleri
+        // Onay / red linkleri
         var approveUrl = Url.Action("Decide", "Business", new { token, decision = "approve" }, Request.Scheme);
         var rejectUrl  = Url.Action("Decide", "Business", new { token, decision = "reject" }, Request.Scheme);
 
@@ -74,10 +73,18 @@ public class AppointmentsController : ControllerBase
 </p>
 <p style='color:#6b7280;font-size:12px'>Link 24 saat geçerlidir.</p>";
 
-        await _email.SendAsync(_emailOpt.BusinessInbox, "Yeni Randevu Talebi", html);
+        // ✅ Business inbox env'den oku (Render: Email__BusinessInbox)
+        var businessInbox = _config["Email:BusinessInbox"];
+        if (string.IsNullOrWhiteSpace(businessInbox))
+            return StatusCode(500, "Email:BusinessInbox ayarı bulunamadı. Render env'e Email__BusinessInbox ekleyin.");
 
+        // İşletmeye mail
+        await _email.SendAsync(businessInbox, "Yeni Randevu Talebi", html);
+
+        // Müşteriye bilgilendirme maili
         await _email.SendAsync(appt.CustomerEmail, "Randevu talebiniz alındı",
-            $"<p>Merhaba {appt.CustomerName},</p><p>{appt.StartAt:dd.MM.yyyy HH:mm} için <b>{appt.ServiceName}</b> randevu talebiniz alınmıştır. Onaylanınca size mail atacağız.</p>");
+            $"<p>Merhaba {appt.CustomerName},</p>" +
+            $"<p>{appt.StartAt:dd.MM.yyyy HH:mm} için <b>{appt.ServiceName}</b> randevu talebiniz alınmıştır. Onaylanınca size mail atacağız.</p>");
 
         return Ok(new { appt.Id, appt.Status });
     }
