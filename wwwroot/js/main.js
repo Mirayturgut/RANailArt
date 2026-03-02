@@ -146,7 +146,7 @@
       }
 
       const data = await res.json();
-      setMsg(`✅ Talep alındı! (ID: ${data.id ?? data.Id ?? "?"})`);
+      setMsg(`✅ Talebiniz alındı! En kısa sürede dönüş yapacağız.`);
       form.reset();
     } catch (err) {
       console.error(err);
