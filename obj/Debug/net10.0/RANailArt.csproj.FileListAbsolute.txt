@@ -334,3 +334,4 @@
 /Users/mirayturgut/RANailArt/obj/Debug/net10.0/compressed/tivgma82og-{0}-xtld0qxpgz-xtld0qxpgz.gz
 /Users/mirayturgut/RANailArt/obj/Debug/net10.0/compressed/viagvwno0r-{0}-9nhwnk5z5p-9nhwnk5z5p.gz
 /Users/mirayturgut/RANailArt/obj/Debug/net10.0/compressed/0ddq50jmg8-{0}-243v0uo8o4-243v0uo8o4.gz
+/Users/mirayturgut/RANailArt/obj/Debug/net10.0/RANailArt.sourcelink.json

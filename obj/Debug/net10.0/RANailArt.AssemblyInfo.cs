@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RANailArt")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+24c2d9103ebe095f708bbd51fd1e0fbc9d2242b1")]
 [assembly: System.Reflection.AssemblyProductAttribute("RANailArt")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RANailArt")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

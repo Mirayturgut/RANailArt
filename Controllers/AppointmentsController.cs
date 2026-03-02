@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-
 [ApiController]
 [Route("api/[controller]")]
 public class AppointmentsController : ControllerBase
@@ -21,6 +20,21 @@ public class AppointmentsController : ControllerBase
     [HttpGet("ping")]
     public IActionResult Ping() => Ok("pong");
 
+    // DB bağlantı testi
+    [HttpGet("dbping")]
+    public async Task<IActionResult> DbPing()
+    {
+        try
+        {
+            var can = await _db.Database.CanConnectAsync();
+            return Ok(new { canConnect = can });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.ToString());
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] AppointmentCreateDto dto)
     {
@@ -34,9 +48,11 @@ public class AppointmentsController : ControllerBase
             a.StartAt < end &&
             a.StartAt.AddMinutes(a.DurationMinutes) > start
         );
+
         if (conflict) return Conflict("Bu saat dolu. Lütfen başka saat seçin.");
 
         var token = TokenGen.CreateUrlSafeToken();
+
         var appt = new Appointment
         {
             CustomerName = dto.CustomerName,
@@ -54,7 +70,6 @@ public class AppointmentsController : ControllerBase
         _db.Appointments.Add(appt);
         await _db.SaveChangesAsync();
 
-        // Onay / red linkleri
         var approveUrl = Url.Action("Decide", "Business", new { token, decision = "approve" }, Request.Scheme);
         var rejectUrl  = Url.Action("Decide", "Business", new { token, decision = "reject" }, Request.Scheme);
 
@@ -74,30 +89,29 @@ public class AppointmentsController : ControllerBase
 </p>
 <p style='color:#6b7280;font-size:12px'>Link 24 saat geçerlidir.</p>";
 
-        // ✅ Business inbox env'den oku (Render: Email__BusinessInbox)
         var businessInbox = _config["Email:BusinessInbox"];
         if (string.IsNullOrWhiteSpace(businessInbox))
-            return StatusCode(500, "Email:BusinessInbox ayarı bulunamadı. Render env'e Email__BusinessInbox ekleyin.");
+            return StatusCode(500, "Email:BusinessInbox ayarı yok. Render ENV: Email__BusinessInbox ekle.");
 
-        // İşletmeye mail
-        await _email.SendAsync(businessInbox, "Yeni Randevu Talebi", html);
+        try
+        {
+            await _email.SendAsync(businessInbox, "Yeni Randevu Talebi", html);
 
-        // Müşteriye bilgilendirme maili
-        await _email.SendAsync(appt.CustomerEmail, "Randevu talebiniz alındı",
-            $"<p>Merhaba {appt.CustomerName},</p>" +
-            $"<p>{appt.StartAt:dd.MM.yyyy HH:mm} için <b>{appt.ServiceName}</b> randevu talebiniz alınmıştır. Onaylanınca size mail atacağız.</p>");
+            await _email.SendAsync(
+                appt.CustomerEmail,
+                "Randevu talebiniz alındı",
+                $"<p>Merhaba {appt.CustomerName},</p>" +
+                $"<p>{appt.StartAt:dd.MM.yyyy HH:mm} için <b>{appt.ServiceName}</b> randevu talebiniz alınmıştır. Onaylanınca size mail atacağız.</p>"
+            );
+        }
+        catch (Exception ex)
+        {
+            // DB’ye kaydetti ama mail patladıysa bunu net görelim:
+            return StatusCode(500, "Mail gönderilemedi: " + ex.Message);
+        }
 
         return Ok(new { appt.Id, appt.Status });
     }
-    try
-{
-    await _email.SendAsync(businessInbox, "Yeni Randevu Talebi", html);
-    await _email.SendAsync(appt.CustomerEmail, "Randevu talebiniz alındı", $"...");
-}
-catch (Exception ex)
-{
-    return StatusCode(500, "Mail gönderilemedi: " + ex.Message);
-}
 }
 
 public class AppointmentCreateDto
