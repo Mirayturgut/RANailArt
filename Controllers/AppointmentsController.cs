@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+
 [ApiController]
 [Route("api/[controller]")]
 public class AppointmentsController : ControllerBase
@@ -88,6 +89,15 @@ public class AppointmentsController : ControllerBase
 
         return Ok(new { appt.Id, appt.Status });
     }
+    try
+{
+    await _email.SendAsync(businessInbox, "Yeni Randevu Talebi", html);
+    await _email.SendAsync(appt.CustomerEmail, "Randevu talebiniz alındı", $"...");
+}
+catch (Exception ex)
+{
+    return StatusCode(500, "Mail gönderilemedi: " + ex.Message);
+}
 }
 
 public class AppointmentCreateDto
